@@ -281,13 +281,30 @@
     });
   }
   function wireUrlInput(btnId, urlInputId, wrapId, assign){
-    document.getElementById(btnId).addEventListener('click', ()=>{
+    document.getElementById(btnId).addEventListener('click', async ()=>{
       const src = document.getElementById(urlInputId).value.trim();
       if(!src) return;
       const wrap = document.getElementById(wrapId);
+      const ytId = extractYouTubeId(src);
+      if(ytId){
+        // pasted a YouTube link here: load it as a YouTube embed instead of
+        // treating it as a direct video file (YouTube pages are not raw media files)
+        await ytReady;
+        const divId = 'yt_'+btnId;
+        wrap.innerHTML = `<div id="${divId}"></div>`;
+        const player = new YT.Player(divId, {
+          videoId:ytId, width:'100%', height:'100%',
+          playerVars:{ playsinline:1 },
+          events:{ onReady:()=>{ assign(YTController(player)); } }
+        });
+        return;
+      }
       const vid = 'v_'+btnId;
       wrap.innerHTML = `<video id="${vid}" controls playsinline crossorigin="anonymous"></video>`;
       const v = document.getElementById(vid); v.src = src;
+      v.addEventListener('error', ()=>{
+        wrap.innerHTML = `<div class="placeholder">Não consegui carregar esse vídeo direto (não é um link de arquivo de vídeo, ou o site bloqueia acesso externo). Se for YouTube, cole o link normal que o app detecta sozinho.</div>`;
+      });
       assign(HTML5Controller(v));
     });
   }
